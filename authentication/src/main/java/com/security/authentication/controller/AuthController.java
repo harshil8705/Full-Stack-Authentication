@@ -127,27 +127,32 @@ public class AuthController {
 
         if (adminKey.equals(signupRequest.getAdminKey())) {
 
-            List<Role> everyRoles = roleRepository.findAll();
+            Role adminRole = roleRepository.findByRoleName(AppRoles.ROLE_ADMIN)
+                    .orElseThrow(() -> new RuntimeException("Error : No Roles Found"));
+            roles.add(adminRole);
 
-            if (everyRoles.isEmpty()) {
-
-                throw new RuntimeException("Error : No Roles Found");
-
-            }
-
-            roles.addAll(everyRoles);
+            Role userRole = roleRepository.findByRoleName(AppRoles.ROLE_USER)
+                    .orElseThrow(() -> new RuntimeException("Error : No Roles Found"));
+            roles.add(userRole);
 
         } else {
 
-            Role userRole = roleRepository.findByRolesName(AppRoles.ROLE_USER)
+            Role userRole = roleRepository.findByRoleName(AppRoles.ROLE_USER)
                     .orElseThrow(() -> new RuntimeException("Error : No Roles Found"));
 
             roles.add(userRole);
 
         }
 
-        newUser.setUserRoles(roles);
+        newUser.setRoles(roles);
         userRepository.save(newUser);
+
+        for (Role role : roles) {
+
+            role.getUsers().add(newUser);
+            roleRepository.save(role);
+
+        }
 
         return new ResponseEntity<>("User Registered Successfully", HttpStatus.OK);
 
