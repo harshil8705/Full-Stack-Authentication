@@ -3,13 +3,18 @@ package com.security.authentication.controller;
 import com.security.authentication.jwt.JwtUtils;
 import com.security.authentication.model.AppRoles;
 import com.security.authentication.model.Role;
+import com.security.authentication.model.TempUser;
 import com.security.authentication.model.User;
 import com.security.authentication.repository.RoleRepository;
+import com.security.authentication.repository.TempUserRepository;
 import com.security.authentication.repository.UserRepository;
 import com.security.authentication.request.LoginRequest;
+import com.security.authentication.request.OtpVerificationRequest;
 import com.security.authentication.request.SignupRequest;
 import com.security.authentication.response.MessageResponse;
 import com.security.authentication.response.UserInfoResponse;
+import com.security.authentication.service.OtpGenerator;
+import com.security.authentication.service.OtpSender;
 import com.security.authentication.service.UserDetailsImpl;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -28,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -48,6 +54,15 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder encoder;
+
+    @Autowired
+    private OtpGenerator otpGenerator;
+
+    @Autowired
+    private TempUserRepository tempUserRepository;
+
+    @Autowired
+    private OtpSender otpSender;
 
     @Value("${spring.app.adminKey}")
     private String adminKey;
@@ -97,35 +112,74 @@ public class AuthController {
 
     @Transactional
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody @Valid SignupRequest signupRequest) {
+    public ResponseEntity<?> signup(@RequestBody @Valid SignupRequest request) {
 
-        if (userRepository.existsByUsername(signupRequest.getUsername())) {
+        if (userRepository.existsByUsername(request.getUsername())) {
 
             return new ResponseEntity<>(new MessageResponse("Username Already Taken"), HttpStatus.BAD_REQUEST);
 
         }
 
-        if (userRepository.existsByEmail(signupRequest.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
 
             return new ResponseEntity<>(new MessageResponse("Email Already Exists"), HttpStatus.BAD_REQUEST);
 
         }
 
-        if (userRepository.existsByMobileNo(signupRequest.getMobileNo())) {
+        if (userRepository.existsByMobileNo(request.getMobileNo())) {
 
             return new ResponseEntity<>(new MessageResponse("Mobile Number already Exists"), HttpStatus.BAD_REQUEST);
 
         }
 
+        String otp = otpGenerator.generateOtp();
+
+        TempUser tempUser = TempUser.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(encoder.encode(request.getPassword()))
+                .mobileNo(request.getMobileNo())
+                .otp(otp)
+                .otpGeneratedTime(LocalDateTime.now())
+                .adminKey(request.getAdminKey() != null ? request.getAdminKey() : null)
+                .build();
+        tempUserRepository.save(tempUser);
+
+        otpSender.sendEmailOtp(request.getEmail(), otp);
+
+        return new ResponseEntity<>("OTP sent to your email. Please verify to complete signup.", HttpStatus.OK);
+
+    }
+
+    @Transactional
+    @PostMapping("/verify-user")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationRequest request) {
+
+        TempUser tempUser = tempUserRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("No OTP request found for this email."));
+
+        if (tempUser.getOtpGeneratedTime().plusHours(1).isBefore(LocalDateTime.now())) {
+
+            tempUserRepository.deleteByEmail(request.getEmail());
+            return new ResponseEntity<>("OTP has Expired! Please Signup again", HttpStatus.BAD_REQUEST);
+
+        }
+
+        if (!tempUser.getOtp().equals(request.getOtpToVerify())) {
+
+            return new ResponseEntity<>("Invalid OTP!!", HttpStatus.BAD_REQUEST);
+
+        }
+
         User newUser = User.builder()
-                .email(signupRequest.getEmail())
-                .mobileNo(signupRequest.getMobileNo())
-                .password(encoder.encode(signupRequest.getPassword()))
-                .username(signupRequest.getUsername())
+                .email(request.getEmail())
+                .mobileNo(tempUser.getMobileNo())
+                .password(tempUser.getPassword())
+                .username(tempUser.getUsername())
                 .build();
         Set<Role> roles = new HashSet<>();
 
-        if (adminKey.equals(signupRequest.getAdminKey())) {
+        if (adminKey.equals(tempUser.getAdminKey())) {
 
             Role adminRole = roleRepository.findByRoleName(AppRoles.ROLE_ADMIN)
                     .orElseThrow(() -> new RuntimeException("Error : No Roles Found"));
@@ -146,6 +200,7 @@ public class AuthController {
 
         newUser.setRoles(roles);
         userRepository.save(newUser);
+        tempUserRepository.deleteByEmail(request.getEmail());
 
         for (Role role : roles) {
 
