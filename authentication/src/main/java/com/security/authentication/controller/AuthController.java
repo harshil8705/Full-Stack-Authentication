@@ -106,7 +106,7 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(response);
+                .body("User Logged in Successfully");
 
     }
 
@@ -209,7 +209,7 @@ public class AuthController {
 
         }
 
-        return new ResponseEntity<>("User Registered Successfully", HttpStatus.OK);
+        return new ResponseEntity<>("User Registered Successfully with roles : " + roles.stream().map(Role::getRoleName).toList(), HttpStatus.OK);
 
     }
 

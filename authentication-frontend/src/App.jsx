@@ -5,7 +5,7 @@ function App() {
 
   return (
     <>
-      <div className='h-screen w-screen bg-linear-to-br from-cyan-300 to-fuchsia-600 via-blue-500 flex justify-center items-center'>
+      <div className='h-screen w-screen px-6 bg-linear-to-br from-cyan-300 to-fuchsia-600 via-blue-500 flex justify-center items-center'>
         <AuthBox />
       </div>
     </>

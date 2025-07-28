@@ -17,6 +17,7 @@ const SignupPage = () => {
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -35,6 +36,7 @@ const SignupPage = () => {
 
             try {
 
+                setLoading(true)
                 const response = await axios.post('http://localhost:9090/api/auth/signup', formData);
                 setMessage(response.data);
                 setShowOtpField(true);
@@ -42,18 +44,21 @@ const SignupPage = () => {
 
             } catch (err) {
 
-                if (err.response && err.respnse.data) {
+                if (err.response && err.response.data) {
                     setError(err.response.data.message || "Signup failed")
                 } else {
                     setError("Server Not Responding");
                 }
 
+            } finally {
+                setLoading(false);
             }
 
         } else {
 
             try {
-
+                
+                setLoading(true)
                 const response = await axios.post('http://localhost:9090/api/auth/verify-user', {
                     email: formData.email,
                     otpToVerify: otp
@@ -80,6 +85,8 @@ const SignupPage = () => {
                     setError("Server Not Responding");
                 }
 
+            } finally {
+                setLoading(false);
             }
 
         }
@@ -163,8 +170,13 @@ const SignupPage = () => {
 
                     <button 
                         type="submit" 
-                        className="w-full bg-gradient-to-br from-blue-500 to-violet-600 hover:from-blue-700 hover:to-violet-800 text-white py-2 rounded">
-                            {isOtpSent ? 'Submit OTP' : 'Sign Up'}
+                        disabled={loading}
+                        className={`w-full py-2 rounded-lg text-white ${loading 
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-br from-blue-500 to-violet-600 hover:from-blue-700 hover:to-violet-800'}`}>
+                            {loading 
+                                ? 'Loading...'
+                                : (isOtpSent ? 'Submit OTP' : 'Sign Up')}
                     </button>
                 </form>
             </div>
