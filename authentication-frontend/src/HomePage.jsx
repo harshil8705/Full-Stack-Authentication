@@ -33,11 +33,10 @@ const HomePage = () => {
 
         try {
 
-            const response = await axios.post('http://localhost:9090/api/auth/sign-out');
+            const response = await axios.post('http://localhost:9090/api/auth/sign-out', {}, {
+                withCredentials: true
+            });
             setMessage(response.data);
-
-            const username = await axios.get('http://localhost:9090/api/auth/username');
-            setGreetMessage(username.data);
 
             setTimeout(() => {
                 navigate("/", {state: {message: "Signed Out Successfully"}})
@@ -75,10 +74,9 @@ const HomePage = () => {
                 {error && (
                     <div className="flex justify-center items-center bg-white mt-8 text-red-600 text-lg font-medium">{error}</div>
                 )}
-
-                <div className="text-6xl font-black text-white flex justify-center items-center mt-20">
-                    Welcome, {greetMessage}
-                </div>
+                {greetMessage && (
+                    <div className="flex justify-center items-center bg-white mt-8 text-green-600 text-lg font-medium">Welcome, {greetMessage}</div>
+                )}
 
             </div>
         </>
