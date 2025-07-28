@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
 
@@ -11,6 +12,8 @@ const LoginPage = () => {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -30,11 +33,12 @@ const LoginPage = () => {
             setLoading(true);
             const response = await axios.post('http://localhost:9090/api/auth/signin', formData)
             setMessage(response.data);
+            navigate("/home", {state: {message: response.data}})
 
-        } catch (error) {
+        } catch (err) {
 
             if (err.response && err.response.data) {
-                setError(err.response.data.message || "Signup failed")
+                setError(err.response.data.message || "Login failed")
             } else {
                 setError("Server Not Responding");
             }

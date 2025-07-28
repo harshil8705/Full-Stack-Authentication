@@ -250,9 +250,7 @@ public class AuthController {
 
         ResponseCookie cookie = jwtUtils.generateCleanJwtCookie();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new MessageResponse("You've been signed out!"));
+        return new ResponseEntity<>("User Signed Out Successfully", HttpStatus.OK);
 
     }
 
