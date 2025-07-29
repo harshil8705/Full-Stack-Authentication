@@ -14,9 +14,9 @@ function App() {
             <Route path="/" element={<AuthBox />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/home" element={<HomePage />} />
-      </Routes>
-      </div>
-    </Router>
+          </Routes>
+        </div>
+      </Router>
     </>
   )
 }
